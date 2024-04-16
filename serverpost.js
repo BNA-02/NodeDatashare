@@ -37,21 +37,6 @@ app.post('/data', (req, res) => {
     });
 });
 
-// Endpoint to read the contents of the file
-app.get('/data', (req, res) => {
-    fs.readFile('data.txt', 'utf8', (err, data) => {
-        if (err) {
-            console.error('Error reading data:', err);
-            return res.status(500).send('Error reading data');
-        }
-        // Split the data by newline character
-        const lines = data.split('\n');
-        // Filter out empty lines
-        const filteredLines = lines.filter(line => line.trim() !== '');
-        res.send(filteredLines);
-    });
-});
-
 // Function to remove duplicate lines from a file
 function removeDuplicates(filename) {
     return new Promise((resolve, reject) => {
