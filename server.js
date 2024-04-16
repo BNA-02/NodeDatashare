@@ -56,7 +56,7 @@ function parseDataToJson(rawData) {
         const jsonObject = {};
         const pairs = line.split('\t');
         pairs.forEach(pair => {
-            const [key, value] = pair.split(':');
+            const [key, value] = pair.split(' :');
             if (key && value) {
                 jsonObject[key.trim()] = value.trim();
             }
