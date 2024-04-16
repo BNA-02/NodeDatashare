@@ -52,6 +52,28 @@ app.get('/data', (req, res) => {
     });
 });
 
+// Endpoint to clear and backup the data file
+app.get('/clear', (req, res) => {
+    const timestamp = new Date().toISOString().replace(/:/g, '-');
+    const backupFilename = `data_backup_${timestamp}.txt`;
+
+    fs.copyFile('data.txt', backupFilename, (err) => {
+        if (err) {
+            console.error('Error backing up data:', err);
+            return res.status(500).send('Error backing up data');
+        }
+
+        fs.truncate('data.txt', 0, (err) => {
+            if (err) {
+                console.error('Error clearing data:', err);
+                return res.status(500).send('Error clearing data');
+            }
+            console.log('Data cleared and backed up successfully');
+            res.send('Data cleared and backed up successfully');
+        });
+    });
+});
+
 // Function to remove duplicate lines from a file
 function removeDuplicates(filename) {
     return new Promise((resolve, reject) => {
