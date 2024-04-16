@@ -10,60 +10,101 @@ app.use(express.json());
 // Endpoint to handle POST requests
 app.post('/data', (req, res) => {
     // Retrieve data from request body
-    const data = req.body.data;
+    const rawData = req.body.data;
 
-    if (!data) {
+    if (!rawData) {
         return res.status(400).send('Data parameter is required');
     }
 
-    // Save data to a file
-    fs.appendFile('data.txt', data + '\n', (err) => {
+    // Parse raw data into array of JSON objects
+    const jsonObjects = parseDataToJson(rawData);
+
+    if (!jsonObjects) {
+        return res.status(400).send('Invalid data format');
+    }
+
+    // Append JSON objects to file
+    fs.appendFile('data.json', jsonObjects.map(obj => JSON.stringify(obj)).join('\n') + '\n', (err) => {
         if (err) {
             console.error('Error saving data:', err);
             return res.status(500).send('Error saving data');
         }
         console.log('Data saved successfully');
-
-        // Remove duplicate lines
-        removeDuplicates('data.txt')
+        
+        // Remove duplicates after appending
+        removeDuplicates('data.json')
             .then(() => {
-                console.log('Duplicate lines removed successfully');
-                res.send('Data saved and duplicate lines removed successfully');
+                console.log('Duplicates removed successfully');
+                // Send response after both appending and removing duplicates
+                res.send('Data saved successfully');
             })
             .catch((error) => {
-                console.error('Error removing duplicate lines:', error);
-                res.status(500).send('Error removing duplicate lines');
+                console.error('Error removing duplicates:', error);
+                res.status(500).send('Error removing duplicates');
             });
     });
 });
 
-// Endpoint to read the contents of the file
+
+
+// Function to parse raw data into JSON objects
+function parseDataToJson(rawData) {
+    const jsonObjects = [];
+    const lines = rawData.split('\n');
+
+    lines.forEach(line => {
+        const jsonObject = {};
+        const pairs = line.split('\t');
+        pairs.forEach(pair => {
+            const [key, value] = pair.split(':');
+            if (key && value) {
+                jsonObject[key.trim()] = value.trim();
+            }
+        });
+        jsonObjects.push(jsonObject);
+    });
+
+    return jsonObjects;
+}
+
 app.get('/data', (req, res) => {
-    fs.readFile('data.txt', 'utf8', (err, data) => {
+    fs.readFile('data.json', 'utf8', (err, data) => {
         if (err) {
             console.error('Error reading data:', err);
             return res.status(500).send('Error reading data');
         }
+        
         // Split the data by newline character
         const lines = data.split('\n');
-        // Filter out empty lines
-        const filteredLines = lines.filter(line => line.trim() !== '');
-        res.send(filteredLines);
+        
+        // Parse each line into a JSON object
+        const jsonObjects = [];
+        lines.forEach(line => {
+            try {
+                const obj = JSON.parse(line);
+                jsonObjects.push(obj);
+            } catch (error) {
+                console.error('Error parsing JSON:', error);
+            }
+        });
+        
+        res.json(jsonObjects);
     });
 });
+
 
 // Endpoint to clear and backup the data file
 app.get('/clear', (req, res) => {
     const timestamp = new Date().toISOString().replace(/:/g, '-');
-    const backupFilename = `data_backup_${timestamp}.txt`;
+    const backupFilename = `data_backup_${timestamp}.json`;
 
-    fs.copyFile('data.txt', backupFilename, (err) => {
+    fs.copyFile('data.json', backupFilename, (err) => {
         if (err) {
             console.error('Error backing up data:', err);
             return res.status(500).send('Error backing up data');
         }
 
-        fs.truncate('data.txt', 0, (err) => {
+        fs.truncate('data.json', 0, (err) => {
             if (err) {
                 console.error('Error clearing data:', err);
                 return res.status(500).send('Error clearing data');
